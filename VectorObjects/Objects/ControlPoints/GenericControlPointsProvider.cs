@@ -185,7 +185,7 @@ namespace Aurigma.GraphicsMill.WinControls
 
         #region IControlPointsProvider interface implementation
 
-        // Provider supplies 18 control points. �ontrol points order is:
+        // Provider supplies 18 control points. 裲ntrol points order is:
         //
         //    9      13      10
         //      1 --- 5 --- 2
@@ -383,6 +383,27 @@ namespace Aurigma.GraphicsMill.WinControls
             float angle = (float)System.Math.Acos(cosA) * sign;
             float degreeAngle = (float)(angle * 180.0f / System.Math.PI);
 
+            if (IsSnapTo90Degrees)
+            {
+                if (System.Math.Abs(degreeAngle) < 45)
+                {
+                    degreeAngle = 0;
+                }
+                else if (System.Math.Abs(degreeAngle - 90) < 45)
+                {
+                    degreeAngle = 90;
+                }
+                else if (System.Math.Abs(degreeAngle + 90) < 45)
+                {
+                    degreeAngle = -90;
+                }
+                else
+                {
+                    // Round to nearest 90 degrees
+                    degreeAngle = ((int)System.Math.Round(degreeAngle / 90.0f)) * 90;
+                }
+            }
+
             if (System.Math.Abs(degreeAngle) > MinRotationAndle)
             {
                 _obj.Transform.RotateAt(degreeAngle, rotationCenter, System.Drawing.Drawing2D.MatrixOrder.Append);
@@ -394,6 +415,11 @@ namespace Aurigma.GraphicsMill.WinControls
         {
             if (!_rotateEnabled)
                 return;
+
+            if (IsRotateCenterPointFixed)
+            {
+                return;
+            }
 
             System.Drawing.PointF savedValue = newPosition;
             VObjectsUtils.TransformPoint(_inverseMatrix, ref newPosition);
@@ -887,6 +913,30 @@ namespace Aurigma.GraphicsMill.WinControls
             }
         }
 
+        internal bool IsSnapTo90Degrees
+        {
+            get
+            {
+                return _isSnapTo90Degrees;
+            }
+            set
+            {
+                _isSnapTo90Degrees = value;
+            }
+        }
+
+        internal bool IsRotateCenterPointFixed
+        {
+            get
+            {
+                return _isRotateCenterPointFixed;
+            }
+            set
+            {
+                _isRotateCenterPointFixed = true;
+            }
+        }
+
         internal ResizeMode ResizeMode
         {
             get
@@ -1197,6 +1247,8 @@ namespace Aurigma.GraphicsMill.WinControls
         private bool _skewEnabled;
         private bool _rotateEnabled;
         private bool _dragEnabled;
+        private bool _isSnapTo90Degrees;
+        private bool _isRotateCenterPointFixed;
 
         private System.Windows.Forms.Cursor _resizeWECursor;
         private System.Windows.Forms.Cursor _resizeNSCursor;
@@ -1404,6 +1456,36 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _provider.RotateCenterCursor = value;
+            }
+        }
+
+        /// <summary>
+        /// 是否每次旋转90度
+        /// </summary>
+        public bool IsSnapTo90Degrees
+        {
+            get
+            {
+                return _provider.IsSnapTo90Degrees;
+            }
+            set
+            {
+                _provider.IsSnapTo90Degrees = value;
+            }
+        }
+
+        /// <summary>
+        /// 是否固定旋转中心点，不允许拖动旋转中心点
+        /// </summary>
+        public bool IsRotateCenterPointFixed
+        {
+            get
+            {
+                return _provider.IsRotateCenterPointFixed;
+            }
+            set
+            {
+                _provider.IsRotateCenterPointFixed = value;
             }
         }
 
