@@ -162,7 +162,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 if (_fillMode != value)
                 {
                     _fillMode = value;
-                    OnChanged(System.EventArgs.Empty);
+                    OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.Update));
                 }
             }
         }

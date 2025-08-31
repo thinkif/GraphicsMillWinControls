@@ -12,7 +12,7 @@ namespace Aurigma.GraphicsMill.WinControls
     {
         #region "Construction / destruction"
 
-        public ImageVObject(Aurigma.GraphicsMill.Bitmap image, bool scaleToActualSize, float x, float y)
+        public ImageVObject(Aurigma.GraphicsMill.Bitmap image, bool scaleToActualSize, float x, float y, Unit unit = Unit.Point)
         {
             if (image == null)
                 throw new System.ArgumentNullException("image");
@@ -25,10 +25,19 @@ namespace Aurigma.GraphicsMill.WinControls
 
             _scaleToActualSize = scaleToActualSize;
 
-            float widthInPoints = Aurigma.GraphicsMill.UnitConverter.ConvertPixelsToUnits(this.DrawnImage.HorizontalResolution, this.DrawnImage.Width, Aurigma.GraphicsMill.Unit.Point);
-            float heightInPoints = Aurigma.GraphicsMill.UnitConverter.ConvertPixelsToUnits(this.DrawnImage.VerticalResolution, this.DrawnImage.Height, Aurigma.GraphicsMill.Unit.Point);
+            if (unit == Unit.Pixel)
+            {
+                float widthInPixels = this.DrawnImage.Width;
+                float heightInPixels = this.DrawnImage.Height;
+                _rect = new RectangleVObject(0, 0, widthInPixels, heightInPixels);
+            }
+            else
+            {
+                float widthInPoints = Aurigma.GraphicsMill.UnitConverter.ConvertPixelsToUnits(this.DrawnImage.HorizontalResolution, this.DrawnImage.Width, Aurigma.GraphicsMill.Unit.Point);
+                float heightInPoints = Aurigma.GraphicsMill.UnitConverter.ConvertPixelsToUnits(this.DrawnImage.VerticalResolution, this.DrawnImage.Height, Aurigma.GraphicsMill.Unit.Point);
 
-            _rect = new RectangleVObject(0, 0, widthInPoints, heightInPoints);
+                _rect = new RectangleVObject(0, 0, widthInPoints, heightInPoints);
+            }
             _rect.Brush = System.Drawing.Brushes.Transparent;
             _rect.Pen = null;
             _rect.Transform.Translate(x, y);
@@ -63,6 +72,10 @@ namespace Aurigma.GraphicsMill.WinControls
                 }
             }
         }
+
+        public Aurigma.GraphicsMill.Bitmap Image => _image;
+
+        public bool ScaleToActualSize => _scaleToActualSize;
 
         #endregion "Construction / destruction"
 

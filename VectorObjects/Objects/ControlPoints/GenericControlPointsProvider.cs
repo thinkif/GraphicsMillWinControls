@@ -1,6 +1,8 @@
 // Copyright (c) 2018 Aurigma Inc. All rights reserved.
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 //
+using System.Drawing;
+
 namespace Aurigma.GraphicsMill.WinControls
 {
     /// <summary>
@@ -87,7 +89,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 throw new System.ArgumentNullException("obj");
 
             _obj = obj;
-            _obj.Changed += new System.EventHandler(VObjectChangedHandler);
+            _obj.Changed += new VObjectChangedEventHandler(VObjectChangedHandler);
 
             _resizeEnabled = true;
             _skewEnabled = true;
@@ -223,6 +225,39 @@ namespace Aurigma.GraphicsMill.WinControls
 
         public virtual void ClickPoint(int index)
         {
+            //    9      13      10
+            //      1 --- 5 --- 2
+            //	    |           |       0 - rotation center point
+            //      |           |       1-4 - major size points
+            //   16 8     0     6 14    5-8 - minor middle-side size points
+            //	    |           |       9-12 - rotation grip points
+            //      |           |       13-16 - skew grip points
+            //      4 --- 7 --- 3       17 - virtual object drag point
+            //   12      15     11
+
+            // 点击旋转操作点时
+            // 点击左上角（9）逆时针90度
+            // 点击左下角（12）逆时针90度
+            // 点击右上角（10）顺时针90度
+            // 点击右下角（11）顺时针90度
+            switch (index)
+            {
+                case 9:
+                case 10:
+                case 11:
+                case 12:
+                    {
+                        if (_rotateEnabled && IsRotateCenterPointFixed)
+                        {
+                            System.Drawing.PointF rotationCenter = _transformedPoints[0].Location;
+                            float angle = 90.0f;
+                            if (index == 9 || index == 12) // Left side
+                                angle = -angle;
+                            RotateToAngle(angle, rotationCenter);
+                        }
+                    }
+                    break;
+            }
         }
 
         public System.Drawing.RectangleF GetControlPointsBounds()
@@ -383,9 +418,16 @@ namespace Aurigma.GraphicsMill.WinControls
             float angle = (float)System.Math.Acos(cosA) * sign;
             float degreeAngle = (float)(angle * 180.0f / System.Math.PI);
 
+            RotateToAngle(degreeAngle, rotationCenter);
+        }
+
+        protected void RotateToAngle(float degreeAngle, PointF rotationCenter)
+        {
+            if (!_rotateEnabled)
+                return;
             if (IsSnapTo90Degrees)
             {
-                if (System.Math.Abs(degreeAngle) < 45)
+                if (System.Math.Abs(degreeAngle) < 10)
                 {
                     degreeAngle = 0;
                 }
@@ -407,6 +449,7 @@ namespace Aurigma.GraphicsMill.WinControls
             if (System.Math.Abs(degreeAngle) > MinRotationAndle)
             {
                 _obj.Transform.RotateAt(degreeAngle, rotationCenter, System.Drawing.Drawing2D.MatrixOrder.Append);
+                _obj.CurrentRotation = (int)((_obj.CurrentRotation + degreeAngle) % 360.0f);
                 UpdateControlPoints();
             }
         }
@@ -937,6 +980,18 @@ namespace Aurigma.GraphicsMill.WinControls
             }
         }
 
+        internal bool IsAllowRotatePointClick
+        {
+            get
+            {
+                return _isAllowRotatePointClick;
+            }
+            set
+            {
+                _isAllowRotatePointClick = value;
+            }
+        }
+
         internal ResizeMode ResizeMode
         {
             get
@@ -1249,6 +1304,7 @@ namespace Aurigma.GraphicsMill.WinControls
         private bool _dragEnabled;
         private bool _isSnapTo90Degrees;
         private bool _isRotateCenterPointFixed;
+        private bool _isAllowRotatePointClick;
 
         private System.Windows.Forms.Cursor _resizeWECursor;
         private System.Windows.Forms.Cursor _resizeNSCursor;
@@ -1486,6 +1542,21 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _provider.IsRotateCenterPointFixed = value;
+            }
+        }
+
+        /// <summary>
+        /// 是否允许点击旋转点进行快速旋转
+        /// </summary>
+        public bool IsAllowRotatePointClick
+        {
+            get
+            {
+                return _provider.IsAllowRotatePointClick;
+            }
+            set
+            {
+                _provider.IsAllowRotatePointClick = value;
             }
         }
 

@@ -13,7 +13,7 @@ namespace Aurigma.GraphicsMill.WinControls
         public PolylineControlPointsProvider(PolylineVObject obj)
         {
             _obj = obj;
-            _obj.Changed += new System.EventHandler(VObjectChangedHandler);
+            _obj.Changed += new VObjectChangedEventHandler(VObjectChangedHandler);
 
             _controlPointPrototype = new EllipseControlPoint(new System.Drawing.Size(8, 8), new System.Drawing.SolidBrush(System.Drawing.Color.Tomato), new System.Drawing.Pen(System.Drawing.Color.WhiteSmoke));
             _controlPointCursor = System.Windows.Forms.Cursors.Cross;

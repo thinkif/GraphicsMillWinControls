@@ -42,6 +42,12 @@ namespace Aurigma.GraphicsMill.WinControls
             set;
         }
 
+        float CurrentRotation
+        {
+            get;
+            set;
+        }
+
         IDesigner Designer
         {
             get;
@@ -73,6 +79,6 @@ namespace Aurigma.GraphicsMill.WinControls
 
         void Update();
 
-        event System.EventHandler Changed;
+        event VObjectChangedEventHandler Changed;
     }
 }

@@ -24,7 +24,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 throw new System.ArgumentNullException("obj");
 
             _obj = obj;
-            _obj.Changed += new System.EventHandler(ObjectChangedHandler);
+            _obj.Changed += new VObjectChangedEventHandler(ObjectChangedHandler);
         }
 
         public void Dispose()
@@ -109,6 +109,17 @@ namespace Aurigma.GraphicsMill.WinControls
 
             if (_dragging && e.Button == System.Windows.Forms.MouseButtons.Left)
             {
+                if (_gripsProvider != null)
+                {
+                    System.Drawing.Point clickedPoint = new System.Drawing.Point(e.X, e.Y);
+                    int pointIndex = _gripsProvider.TestPoint(clickedPoint);
+                    if (pointIndex != GripsProvider.InvalidPointHandle)
+                    {
+                        _gripsProvider.ClickPoint(pointIndex);
+                        _objectHost.HostViewer.InvalidateViewer(new MultiLayerViewerInvalidationTarget(_gripsProvider.GetInvalidationRectangle(), _objectHost.CurrentLayer));
+                    }
+                }
+
                 _obj.DrawMode = VObjectDrawMode.Normal;
                 _dragging = false;
                 _dragPointIndex = GripsProvider.InvalidPointHandle;

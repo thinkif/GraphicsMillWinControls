@@ -328,7 +328,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 if (_pen != value)
                 {
                     _pen = value;
-                    OnChanged(System.EventArgs.Empty);
+                    OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.Update));
                 }
             }
         }
@@ -357,7 +357,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 if (_brush != value)
                 {
                     _brush = value;
-                    OnChanged(System.EventArgs.Empty);
+                    OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.Update));
                 }
             }
         }

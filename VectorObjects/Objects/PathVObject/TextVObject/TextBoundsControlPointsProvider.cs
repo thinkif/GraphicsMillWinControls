@@ -27,7 +27,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 throw new System.ArgumentNullException("obj");
 
             _obj = obj;
-            _obj.Changed += new EventHandler(VObjectChangedHandler);
+            _obj.Changed += new VObjectChangedEventHandler(VObjectChangedHandler);
 
             _points = new System.Drawing.PointF[4];
             _controlPointsEnabled = true;

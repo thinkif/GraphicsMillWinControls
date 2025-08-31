@@ -59,17 +59,17 @@ namespace Aurigma.GraphicsMill.WinControls
 
         private void ObjectAddedHandler(object sender, VObjectEventArgs e)
         {
-            e.VObject.Changed += new System.EventHandler(VObjectChangedHandler);
+            e.VObject.Changed += new VObjectChangedEventHandler(VObjectChangedHandler);
             ProcessVObjectCollectionChanges();
         }
 
         private void ObjectRemovedHandler(object sender, VObjectEventArgs e)
         {
-            e.VObject.Changed -= new System.EventHandler(VObjectChangedHandler);
+            e.VObject.Changed -= new VObjectChangedEventHandler(VObjectChangedHandler);
             ProcessVObjectCollectionChanges();
         }
 
-        private void VObjectChangedHandler(object sender, System.EventArgs e)
+        private void VObjectChangedHandler(object sender, VObjectChangedEventArgs e)
         {
             if (_updatingChildren)
                 return;
@@ -83,7 +83,7 @@ namespace Aurigma.GraphicsMill.WinControls
             UpdateBaseRectangle();
             UpdateChildMatrices();
             UpdateControlPointsState();
-            base.OnChanged(System.EventArgs.Empty);
+            base.OnChanged(e);
         }
 
         private void ProcessVObjectCollectionChanges()
@@ -93,7 +93,7 @@ namespace Aurigma.GraphicsMill.WinControls
             UpdateBaseRectangle();
             UpdateChildMatrices();
             UpdateControlPointsState();
-            base.OnChanged(System.EventArgs.Empty);
+            base.OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.Update));
         }
 
         #endregion "Internal events tracking"
@@ -210,12 +210,12 @@ namespace Aurigma.GraphicsMill.WinControls
             _children.VObjectRemoved -= new VObjectEventHandler(ObjectRemovedHandler);
 
             foreach (IVObject obj in _children)
-                obj.Changed -= new System.EventHandler(VObjectChangedHandler);
+                obj.Changed -= new VObjectChangedEventHandler(VObjectChangedHandler);
 
             if (enable)
             {
                 foreach (IVObject obj in _children)
-                    obj.Changed += new System.EventHandler(VObjectChangedHandler);
+                    obj.Changed += new VObjectChangedEventHandler(VObjectChangedHandler);
 
                 _children.VObjectAdded += new VObjectEventHandler(ObjectAddedHandler);
                 _children.VObjectRemoved += new VObjectEventHandler(ObjectRemovedHandler);

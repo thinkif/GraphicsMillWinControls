@@ -189,7 +189,7 @@ namespace Aurigma.GraphicsMill.WinControls
 
         private void ObjectAddedHandler(object sender, VObjectEventArgs e)
         {
-            e.VObject.Changed += new System.EventHandler(VObjectChangedHandler);
+            e.VObject.Changed += new VObjectChangedEventHandler(VObjectChangedHandler);
             OnChanged(new LayerChangedEventArgs(this, e.VObject, LayerChangeType.ObjectAdded));
         }
 
@@ -201,7 +201,7 @@ namespace Aurigma.GraphicsMill.WinControls
 
         private void ObjectRemovedHandler(object sender, VObjectEventArgs e)
         {
-            e.VObject.Changed -= new System.EventHandler(VObjectChangedHandler);
+            e.VObject.Changed -= new VObjectChangedEventHandler(VObjectChangedHandler);
             OnChanged(new LayerChangedEventArgs(this, e.VObject, LayerChangeType.ObjectRemoved));
         }
 

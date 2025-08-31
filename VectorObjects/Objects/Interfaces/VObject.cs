@@ -3,14 +3,52 @@
 //
 namespace Aurigma.GraphicsMill.WinControls
 {
+    #region 事件
+
+    public enum VObjectChangeType
+    {
+        Dispose = -2,
+        Update = -1,
+        Resize = 0,
+        Skew = 1,
+        Rotate = 2,
+        Drag = 3,
+        MoveNode = 4,
+        ChangeTextArea = 5,
+        LockChanged = 6,
+    }
+
+    public class VObjectChangedEventArgs : VObjectEventArgs
+    {
+        public VObjectChangedEventArgs(IVObject changedObj, VObjectChangeType type)
+            : base(changedObj)
+        {
+            _type = type;
+        }
+
+        public VObjectChangeType ChangeType
+        {
+            get
+            {
+                return _type;
+            }
+        }
+
+        private VObjectChangeType _type;
+    }
+
+    public delegate void VObjectChangedEventHandler(object sender, VObjectChangedEventArgs e);
+
+    #endregion
+
     /// <summary>
     /// Base implementation of the IVObject interface. It provides some properties (Tag/DrawMode/Name/EditDesigner/etc),
     /// resize/rotate/skew control points and methods to extend control points set.
     /// </summary>
     [System.Serializable]
     public abstract class VObject : IVObject,
-        System.Runtime.Serialization.ISerializable,
-        System.IDisposable
+            System.Runtime.Serialization.ISerializable,
+            System.IDisposable
     {
         #region "Constants"
 
@@ -58,7 +96,7 @@ namespace Aurigma.GraphicsMill.WinControls
             try
             {
                 Dispose(true);
-                OnChanged(System.EventArgs.Empty);
+                OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.Dispose));
             }
             finally
             {
@@ -145,14 +183,30 @@ namespace Aurigma.GraphicsMill.WinControls
                 if (_locked != value)
                 {
                     _locked = value;
-                    OnChanged(System.EventArgs.Empty);
+                    OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.LockChanged));
+                }
+            }
+        }
+
+        public float CurrentRotation
+        {
+            get
+            {
+                return _currentRotation;
+            }
+            set
+            {
+                if (_currentRotation != value)
+                {
+                    _currentRotation = value;
+                    OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.Rotate));
                 }
             }
         }
 
         public virtual void Update()
         {
-            OnChanged(System.EventArgs.Empty);
+            OnChanged(new VObjectChangedEventArgs(this, VObjectChangeType.Update));
         }
 
         [System.ComponentModel.Browsable(false)]
@@ -167,13 +221,13 @@ namespace Aurigma.GraphicsMill.WinControls
 
         public abstract void Draw(System.Drawing.Rectangle renderingRect, System.Drawing.Graphics g, ICoordinateMapper coordinateMapper);
 
-        public event System.EventHandler Changed;
+        public event VObjectChangedEventHandler Changed;
 
         #endregion "IVObject interface members"
 
         #region "Changed event methods"
 
-        protected virtual void OnChanged(System.EventArgs e)
+        protected virtual void OnChanged(VObjectChangedEventArgs e)
         {
             if (this.Changed != null)
                 this.Changed(this, e);
@@ -222,13 +276,42 @@ namespace Aurigma.GraphicsMill.WinControls
         public void DragPoint(int index, System.Drawing.PointF newPosition)
         {
             _jointControlPointsProvider.DragPoint(index, newPosition);
-            OnChanged(System.EventArgs.Empty);
+
+            var type = VObjectChangeType.Update;
+            if (index == 0)
+            {
+                type = VObjectChangeType.Update;
+            }
+            else if (index < 5)
+            {
+                type = VObjectChangeType.Resize;
+            }
+            else if (index < 9)
+            {
+                type = VObjectChangeType.Resize;
+            }
+            else if (index < 13)
+            {
+                type = VObjectChangeType.Rotate;
+                // 旋转会累加旋转角度， CurrentRotation属性变化会触发事件，所以此处不需要再次触发事件
+                return;
+            }
+            else if (index < 17)
+            {
+                type = VObjectChangeType.Skew;
+            }
+            else
+            {
+                type = VObjectChangeType.Drag;
+            }
+
+            OnChanged(new VObjectChangedEventArgs(this, type));
         }
 
         public void ClickPoint(int index)
         {
             _jointControlPointsProvider.ClickPoint(index);
-            OnChanged(System.EventArgs.Empty);
+            // 点击暂时需要调用 changed 事件，因为目前点击只实现了旋转，而旋转本身会触发 changed 事件
         }
 
         #endregion "IControlPointsProvider interface implementing"
@@ -276,6 +359,7 @@ namespace Aurigma.GraphicsMill.WinControls
         private object _tag;
         private bool _locked;
         private bool _isDisposed;
+        private float _currentRotation;
 
         private JointControlPointsProvider _jointControlPointsProvider;
         private GenericControlPointsProvider _genericControlPointsProvider;

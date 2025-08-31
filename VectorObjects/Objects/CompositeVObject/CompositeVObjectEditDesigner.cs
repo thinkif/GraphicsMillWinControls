@@ -32,7 +32,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 throw new System.ArgumentException(StringResources.GetString("ExStrArrayZeroLengthError"), "objects");
 
             base.ActualVObject = new CompositeVObject(objects);
-            base.ActualVObject.Changed += new System.EventHandler(ObjectChangedHandler);
+            base.ActualVObject.Changed += new VObjectChangedEventHandler(ObjectChangedHandler);
         }
 
         #endregion "Construction / destruction"
