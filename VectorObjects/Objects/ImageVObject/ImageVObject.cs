@@ -77,6 +77,16 @@ namespace Aurigma.GraphicsMill.WinControls
 
         public bool ScaleToActualSize => _scaleToActualSize;
 
+        /// <summary>
+        /// 为了节省内存，在排版编辑等场景中原图过大，所以在加载时进行缩放显示，此属性用于记录缩放比并在必要时还原。
+        /// </summary>
+        public float ImageScaleX { get; set; } = 1f;
+
+        /// <summary>
+        /// 为了节省内存，在排版编辑等场景中原图过大，所以在加载时进行缩放显示，此属性用于记录缩放比并在必要时还原。
+        /// </summary>
+        public float ImageScaleY { get; set; } = 1f;
+
         #endregion "Construction / destruction"
 
         #region "IVObject implementation"

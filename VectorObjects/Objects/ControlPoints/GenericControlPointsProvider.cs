@@ -479,6 +479,15 @@ namespace Aurigma.GraphicsMill.WinControls
             if (!_dragEnabled)
                 return;
 
+            if (IsLockXAxis)
+            {
+                newPosition.X = _transformedPoints[17].X;
+            }
+            if (IsLockYAxis)
+            {
+                newPosition.Y = _transformedPoints[17].Y;
+            }
+
             System.Drawing.PointF translationVector = new System.Drawing.PointF(newPosition.X - _transformedPoints[17].X, newPosition.Y - _transformedPoints[17].Y);
 
             if (System.Math.Abs(translationVector.X) < VObject.Eps && System.Math.Abs(translationVector.Y) < VObject.Eps)
@@ -991,6 +1000,10 @@ namespace Aurigma.GraphicsMill.WinControls
                 _isAllowRotatePointClick = value;
             }
         }
+
+        internal bool IsLockXAxis { get; set; }
+
+        internal bool IsLockYAxis { get; set; }
 
         internal ResizeMode ResizeMode
         {
@@ -1653,6 +1666,36 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _provider.DragCursor = value;
+            }
+        }
+
+        /// <summary>
+        /// 锁定X轴方向的拖动动作，只能垂直拖动
+        /// </summary>
+        public bool IsLockXAxis
+        {
+            get
+            {
+                return _provider.IsLockXAxis;
+            }
+            set
+            {
+                _provider.IsLockXAxis = value;
+            }
+        }
+
+        /// <summary>
+        /// 锁定Y轴方向的拖动动作，只能水平拖动
+        /// </summary>
+        public bool IsLockYAxis
+        {
+            get
+            {
+                return _provider.IsLockYAxis;
+            }
+            set
+            {
+                _provider.IsLockYAxis = value;
             }
         }
 

@@ -93,6 +93,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
+    <DocumentationFile>bin\Release\Aurigma.GraphicsMill.WinControls.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
@@ -107,9 +108,9 @@
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Aurigma.GraphicsMill, Version=8.2.17.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
+    <Reference Include="Aurigma.GraphicsMill, Version=11.6.9.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Source\MPOLayout\src\framework\Aurigma.GraphicsMill.dll</HintPath>
+      <HintPath>..\..\MPOLayout\src\framework\Aurigma.GraphicsMill.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <Name>System</Name>

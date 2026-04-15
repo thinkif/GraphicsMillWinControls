@@ -4,7 +4,7 @@
 using System.Reflection;
 
 [assembly: AssemblyVersion("8.2.17.0")]
-[assembly: AssemblyFileVersion("8.2.17.0")]
+[assembly: AssemblyFileVersion("11.6.18.0")]
 [assembly: AssemblyCompany("Aurigma, Inc.")]
 [assembly: AssemblyCopyright("Aurigma, Inc.")]
 [assembly: AssemblyTrademark("Aurigma Graphics Mill")]

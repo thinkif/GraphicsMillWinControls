@@ -137,9 +137,9 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Aurigma.GraphicsMill, Version=8.2.17.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
+    <Reference Include="Aurigma.GraphicsMill, Version=11.6.18.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Source\MPOLayout\src\framework\Aurigma.GraphicsMill.dll</HintPath>
+      <HintPath>..\..\MPOLayout\src\framework\Aurigma.GraphicsMill.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System">
