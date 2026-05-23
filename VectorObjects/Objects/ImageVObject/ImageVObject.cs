@@ -141,6 +141,7 @@ namespace Aurigma.GraphicsMill.WinControls
             return _rect.HitTest(point, precisionDelta);
         }
 
+
         public override void Draw(System.Drawing.Rectangle renderingRect, System.Drawing.Graphics g, ICoordinateMapper coordinateMapper)
         {
             if (g == null)

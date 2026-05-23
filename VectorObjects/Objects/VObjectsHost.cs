@@ -36,6 +36,12 @@ namespace Aurigma.GraphicsMill.WinControls
             _designerOptions[DesignerSettingsConstants.ResizeProportionallyWithShift] = true;
             _designerOptions[DesignerSettingsConstants.MultiSelect] = true;
             _designerOptions[DesignerSettingsConstants.MultipleVObjectsTransformationEnabled] = true;
+            _designerOptions[DesignerSettingsConstants.SnapEnabled] = true;
+            _designerOptions[DesignerSettingsConstants.SnapDetectTolerance] = 13.5f;
+            _designerOptions[DesignerSettingsConstants.SnapApplyTolerance] = 2.25f;
+            _designerOptions[DesignerSettingsConstants.SnapReleaseTolerance] = 5.25f;
+            _designerOptions[DesignerSettingsConstants.SnapGuideLineColor] = System.Drawing.Color.Blue;
+            _designerOptions[DesignerSettingsConstants.SnapNearestOnly] = true;
         }
 
         private void RegisterInternalEventHandlers()
@@ -414,6 +420,16 @@ namespace Aurigma.GraphicsMill.WinControls
         public void SaveState()
         {
             _undoRedoTracker.SaveState();
+        }
+
+        internal void BeginUndoRedoTransaction()
+        {
+            _undoRedoTracker.BeginTransaction();
+        }
+
+        internal void EndUndoRedoTransaction(bool saveState)
+        {
+            _undoRedoTracker.EndTransaction(saveState);
         }
 
         public void Undo()

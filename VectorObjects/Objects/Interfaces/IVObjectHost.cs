@@ -54,6 +54,8 @@ namespace Aurigma.GraphicsMill.WinControls
             set;
         }
 
+        void SaveState();
+
         event DesignerChangedEventHandler DesignerChanged;
 
         event System.EventHandler CurrentLayerChanged;

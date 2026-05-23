@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
   <PropertyGroup>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
@@ -111,7 +111,7 @@
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Aurigma.GraphicsMill, Version=11.6.9.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
+    <Reference Include="Aurigma.GraphicsMill, Version=11.6.27.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\MPOLayout\src\framework\Aurigma.GraphicsMill.dll</HintPath>
     </Reference>
@@ -290,6 +290,42 @@
     <Compile Include="Objects\SerializationUtils.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Objects\UndoRedo\IUndoUnit.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\UndoTransactionContext.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\UndoUnitStack.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\VObjectGeometrySnapshot.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\VObjectStateSnapshot.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\VObjectSnapshotFactory.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\Units\TransformUndoUnit.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\Units\PropertyUndoUnit.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\Units\StructureUndoUnit.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\HostStateSnapshot.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Objects\UndoRedo\Units\HostStateUndoUnit.cs">
+      <SubType>Code</SubType>
+    </Compile>
+
+
+
     <Compile Include="Objects\UndoRedoTracker.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -343,6 +379,9 @@
       <Name>WinControls</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Objects\Snapping\" />
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent>
@@ -351,3 +390,8 @@
     </PostBuildEvent>
   </PropertyGroup>
 </Project>
+
+
+
+
+

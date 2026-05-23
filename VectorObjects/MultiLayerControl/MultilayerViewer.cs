@@ -114,7 +114,7 @@ namespace Aurigma.GraphicsMill.WinControls
     /// MultiLayerViewer control.
     /// </summary>
     [AdaptiveToolboxBitmapAttribute(typeof(ResourceFinder), "MultiLayerViewer.bmp")]
-    public class MultiLayerViewer : ViewerBase, IVObjectHost, Aurigma.GraphicsMill.IStateNavigable
+    public class MultiLayerViewer : ViewerBase, IVObjectHost, Aurigma.GraphicsMill.IStateNavigable, INotifyPropertyChanged
     {
         #region "Constants"
 
@@ -164,6 +164,11 @@ namespace Aurigma.GraphicsMill.WinControls
         private bool _workspaceBorderEnabled;
         private int _workspaceBorderWidth;
         private System.Drawing.Color _workspaceBorderColor;
+
+        private bool _lastCanUndoState;
+        private bool _lastCanRedoState;
+        private int _lastUndoStepCount;
+        private int _lastRedoStepCount;
 
         #endregion "Member variables"
 
@@ -264,12 +269,20 @@ namespace Aurigma.GraphicsMill.WinControls
 
         public event DesignerChangedEventHandler DesignerChanged;
 
+        public event System.EventHandler CanUndoChanged;
+
+        public event System.EventHandler CanRedoChanged;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
         #region "Protected event firing methods"
 
         protected virtual void OnLayerChanged(LayerChangedEventArgs e)
         {
             if (LayerChanged != null)
                 LayerChanged(this, e);
+
+            RefreshUndoRedoBindingState(false);
         }
 
         protected virtual void OnLayerAdded(LayerEventArgs e)
@@ -278,6 +291,8 @@ namespace Aurigma.GraphicsMill.WinControls
 
             if (LayerAdded != null)
                 LayerAdded(this, e);
+
+            RefreshUndoRedoBindingState(false);
         }
 
         protected virtual void OnLayerRemoved(LayerRemovedEventArgs e)
@@ -286,6 +301,62 @@ namespace Aurigma.GraphicsMill.WinControls
 
             if (LayerRemoved != null)
                 LayerRemoved(this, e);
+
+            RefreshUndoRedoBindingState(false);
+        }
+
+        protected virtual void OnCanUndoChanged(System.EventArgs e)
+        {
+            if (CanUndoChanged != null)
+                CanUndoChanged(this, e);
+        }
+
+        protected virtual void OnCanRedoChanged(System.EventArgs e)
+        {
+            if (CanRedoChanged != null)
+                CanRedoChanged(this, e);
+        }
+
+        protected virtual void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            if (PropertyChanged != null)
+                PropertyChanged(this, e);
+        }
+
+        private void RefreshUndoRedoBindingState(bool forceRaise)
+        {
+            if (_objectHost == null)
+                return;
+
+            bool canUndo = _objectHost.CanUndo;
+            if (forceRaise || canUndo != _lastCanUndoState)
+            {
+                _lastCanUndoState = canUndo;
+                OnCanUndoChanged(System.EventArgs.Empty);
+                OnPropertyChanged(new PropertyChangedEventArgs("CanUndo"));
+            }
+
+            bool canRedo = _objectHost.CanRedo;
+            if (forceRaise || canRedo != _lastCanRedoState)
+            {
+                _lastCanRedoState = canRedo;
+                OnCanRedoChanged(System.EventArgs.Empty);
+                OnPropertyChanged(new PropertyChangedEventArgs("CanRedo"));
+            }
+
+            int undoStepCount = _objectHost.UndoStepCount;
+            if (forceRaise || undoStepCount != _lastUndoStepCount)
+            {
+                _lastUndoStepCount = undoStepCount;
+                OnPropertyChanged(new PropertyChangedEventArgs("UndoStepCount"));
+            }
+
+            int redoStepCount = _objectHost.RedoStepCount;
+            if (forceRaise || redoStepCount != _lastRedoStepCount)
+            {
+                _lastRedoStepCount = redoStepCount;
+                OnPropertyChanged(new PropertyChangedEventArgs("RedoStepCount"));
+            }
         }
 
         protected virtual void OnDesignerChanged(DesignerChangedEventArgs e)
@@ -344,6 +415,7 @@ namespace Aurigma.GraphicsMill.WinControls
             UpdateContentSize();
             UpdateControlBitmap();
             UpdateViewportCanvas();
+            RefreshUndoRedoBindingState(true);
         }
 
         #region "Internal events tracking"
@@ -383,11 +455,14 @@ namespace Aurigma.GraphicsMill.WinControls
         private void CurrentLayerChangedHandler(object sender, System.EventArgs e)
         {
             OnCurrentLayerChanged(e);
+            OnPropertyChanged(new PropertyChangedEventArgs("CurrentLayer"));
+            OnPropertyChanged(new PropertyChangedEventArgs("CurrentLayerIndex"));
         }
 
         private void DesignerChangedHandler(object sender, DesignerChangedEventArgs e)
         {
             OnDesignerChanged(e);
+            OnPropertyChanged(new PropertyChangedEventArgs("CurrentDesigner"));
         }
 
         #endregion "Internal events tracking"
@@ -415,8 +490,12 @@ namespace Aurigma.GraphicsMill.WinControls
 
             set
             {
+                if (_backgroundStyle == value)
+                    return;
+
                 _backgroundStyle = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceBackgroundStyle"));
             }
         }
 
@@ -431,8 +510,12 @@ namespace Aurigma.GraphicsMill.WinControls
 
             set
             {
+                if (_workspaceBackgroundColor1 == value)
+                    return;
+
                 _workspaceBackgroundColor1 = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceBackColor1"));
             }
         }
 
@@ -447,8 +530,12 @@ namespace Aurigma.GraphicsMill.WinControls
 
             set
             {
+                if (_workspaceBackgroundColor2 == value)
+                    return;
+
                 _workspaceBackgroundColor2 = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceBackColor2"));
             }
         }
 
@@ -464,8 +551,12 @@ namespace Aurigma.GraphicsMill.WinControls
 
             set
             {
+                if (_workspaceBorderEnabled == value)
+                    return;
+
                 _workspaceBorderEnabled = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceBorderEnabled"));
             }
         }
 
@@ -481,8 +572,12 @@ namespace Aurigma.GraphicsMill.WinControls
 
             set
             {
+                if (_workspaceBorderColor == value)
+                    return;
+
                 _workspaceBorderColor = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceBorderColor"));
             }
         }
 
@@ -500,9 +595,12 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 if (value < 0)
                     throw new System.ArgumentOutOfRangeException("value", StringResources.GetString("ExStrValueShouldBeAboveZero"));
+                if (_workspaceBorderWidth == value)
+                    return;
 
                 _workspaceBorderWidth = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceBorderWidth"));
             }
         }
 
@@ -517,8 +615,12 @@ namespace Aurigma.GraphicsMill.WinControls
 
             set
             {
+                if (_scrollBarsStyle == value)
+                    return;
+
                 _scrollBarsStyle = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("ScrollBarsStyle"));
             }
         }
 
@@ -534,8 +636,12 @@ namespace Aurigma.GraphicsMill.WinControls
 
             set
             {
+                if (_viewportAlignment == value)
+                    return;
+
                 _viewportAlignment = value;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("ViewportAlignment"));
             }
         }
 
@@ -557,6 +663,7 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 _objectHost.DesignerOptions[DesignerSettingsConstants.ResizeProportionallyWithShift] = value;
                 _objectHost.CurrentDesigner.UpdateSettings();
+                OnPropertyChanged(new PropertyChangedEventArgs("ResizeProportionallyWithShift"));
             }
         }
 
@@ -576,6 +683,7 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 _objectHost.DesignerOptions[DesignerSettingsConstants.MultiSelect] = value;
                 _objectHost.CurrentDesigner.UpdateSettings();
+                OnPropertyChanged(new PropertyChangedEventArgs("MultiSelect"));
             }
         }
 
@@ -595,6 +703,128 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 _objectHost.DesignerOptions[DesignerSettingsConstants.MultipleVObjectsTransformationEnabled] = value;
                 _objectHost.CurrentDesigner.UpdateSettings();
+                OnPropertyChanged(new PropertyChangedEventArgs("MultipleVObjectsTransformationEnabled"));
+            }
+        }
+
+        [System.ComponentModel.Browsable(true)]
+        [System.ComponentModel.DefaultValue(true)]
+        public bool SnapEnabled
+        {
+            get
+            {
+                if (!_objectHost.DesignerOptions.ContainsKey(DesignerSettingsConstants.SnapEnabled))
+                    throw new Aurigma.GraphicsMill.UnexpectedException(StringResources.GetString("ExStrCannotFindDesignerOptionsKey"));
+
+                return (bool)_objectHost.DesignerOptions[DesignerSettingsConstants.SnapEnabled];
+            }
+            set
+            {
+                _objectHost.DesignerOptions[DesignerSettingsConstants.SnapEnabled] = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("SnapEnabled"));
+            }
+        }
+
+        [System.ComponentModel.Browsable(true)]
+        [System.ComponentModel.DefaultValue(13.5f)]
+        public float SnapDetectTolerance
+        {
+            get
+            {
+                if (!_objectHost.DesignerOptions.ContainsKey(DesignerSettingsConstants.SnapDetectTolerance))
+                    throw new Aurigma.GraphicsMill.UnexpectedException(StringResources.GetString("ExStrCannotFindDesignerOptionsKey"));
+
+                object value = _objectHost.DesignerOptions[DesignerSettingsConstants.SnapDetectTolerance];
+                return value is float ? (float)value : (value is int ? (int)value : 0);
+            }
+            set
+            {
+                if (value < 0)
+                    throw new System.ArgumentOutOfRangeException("value", StringResources.GetString("ExStrValueShouldBeAboveZero"));
+
+                _objectHost.DesignerOptions[DesignerSettingsConstants.SnapDetectTolerance] = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("SnapDetectTolerance"));
+            }
+        }
+
+        [System.ComponentModel.Browsable(true)]
+        [System.ComponentModel.DefaultValue(2.25f)]
+        public float SnapApplyTolerance
+        {
+            get
+            {
+                if (!_objectHost.DesignerOptions.ContainsKey(DesignerSettingsConstants.SnapApplyTolerance))
+                    throw new Aurigma.GraphicsMill.UnexpectedException(StringResources.GetString("ExStrCannotFindDesignerOptionsKey"));
+
+                object value = _objectHost.DesignerOptions[DesignerSettingsConstants.SnapApplyTolerance];
+                return value is float ? (float)value : (value is int ? (int)value : 0);
+            }
+            set
+            {
+                if (value < 0)
+                    throw new System.ArgumentOutOfRangeException("value", StringResources.GetString("ExStrValueShouldBeAboveZero"));
+
+                _objectHost.DesignerOptions[DesignerSettingsConstants.SnapApplyTolerance] = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("SnapApplyTolerance"));
+            }
+        }
+
+        [System.ComponentModel.Browsable(true)]
+        [System.ComponentModel.DefaultValue(5.25f)]
+        public float SnapReleaseTolerance
+        {
+            get
+            {
+                if (!_objectHost.DesignerOptions.ContainsKey(DesignerSettingsConstants.SnapReleaseTolerance))
+                    throw new Aurigma.GraphicsMill.UnexpectedException(StringResources.GetString("ExStrCannotFindDesignerOptionsKey"));
+
+                object value = _objectHost.DesignerOptions[DesignerSettingsConstants.SnapReleaseTolerance];
+                return value is float ? (float)value : (value is int ? (int)value : 0);
+            }
+            set
+            {
+                if (value < 0)
+                    throw new System.ArgumentOutOfRangeException("value", StringResources.GetString("ExStrValueShouldBeAboveZero"));
+
+                _objectHost.DesignerOptions[DesignerSettingsConstants.SnapReleaseTolerance] = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("SnapReleaseTolerance"));
+            }
+        }
+
+        [System.ComponentModel.Browsable(true)]
+        [System.ComponentModel.DefaultValue(typeof(System.Drawing.Color), "Blue")]
+        public System.Drawing.Color SnapGuideLineColor
+        {
+            get
+            {
+                if (!_objectHost.DesignerOptions.ContainsKey(DesignerSettingsConstants.SnapGuideLineColor))
+                    throw new Aurigma.GraphicsMill.UnexpectedException(StringResources.GetString("ExStrCannotFindDesignerOptionsKey"));
+
+                return (System.Drawing.Color)_objectHost.DesignerOptions[DesignerSettingsConstants.SnapGuideLineColor];
+            }
+            set
+            {
+                _objectHost.DesignerOptions[DesignerSettingsConstants.SnapGuideLineColor] = value;
+                InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("SnapGuideLineColor"));
+            }
+        }
+
+        [System.ComponentModel.Browsable(true)]
+        [System.ComponentModel.DefaultValue(true)]
+        public bool SnapNearestOnly
+        {
+            get
+            {
+                if (!_objectHost.DesignerOptions.ContainsKey(DesignerSettingsConstants.SnapNearestOnly))
+                    throw new Aurigma.GraphicsMill.UnexpectedException(StringResources.GetString("ExStrCannotFindDesignerOptionsKey"));
+
+                return (bool)_objectHost.DesignerOptions[DesignerSettingsConstants.SnapNearestOnly];
+            }
+            set
+            {
+                _objectHost.DesignerOptions[DesignerSettingsConstants.SnapNearestOnly] = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("SnapNearestOnly"));
             }
         }
 
@@ -1404,6 +1634,7 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _objectHost.CurrentDesigner = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("CurrentDesigner"));
             }
         }
 
@@ -1458,6 +1689,8 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _objectHost.CurrentLayer = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("CurrentLayer"));
+                OnPropertyChanged(new PropertyChangedEventArgs("CurrentLayerIndex"));
             }
         }
 
@@ -1472,6 +1705,8 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _objectHost.CurrentLayerIndex = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("CurrentLayerIndex"));
+                OnPropertyChanged(new PropertyChangedEventArgs("CurrentLayer"));
             }
         }
 
@@ -1490,7 +1725,13 @@ namespace Aurigma.GraphicsMill.WinControls
             }
             set
             {
+                if (_unit == value)
+                    return;
+
                 _unit = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("Unit"));
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceWidth"));
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceHeight"));
             }
         }
 
@@ -1515,6 +1756,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 OnWorkspaceChanged(System.EventArgs.Empty);
 
                 this.InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceWidth"));
             }
         }
 
@@ -1539,6 +1781,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 OnWorkspaceChanged(System.EventArgs.Empty);
 
                 this.InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("WorkspaceHeight"));
             }
         }
 
@@ -1564,9 +1807,15 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 System.Drawing.Rectangle canvasRectangle = GetCanvasBounds();
 
-                _scrollingPosition.X = System.Math.Max(0, System.Math.Min(value.X, _contentSize.Width - canvasRectangle.Width));
-                _scrollingPosition.Y = System.Math.Max(0, System.Math.Min(value.Y, _contentSize.Height - canvasRectangle.Height));
+                System.Drawing.Point newPosition = _scrollingPosition;
+                newPosition.X = System.Math.Max(0, System.Math.Min(value.X, _contentSize.Width - canvasRectangle.Width));
+                newPosition.Y = System.Math.Max(0, System.Math.Min(value.Y, _contentSize.Height - canvasRectangle.Height));
+                if (newPosition == _scrollingPosition)
+                    return;
+
+                _scrollingPosition = newPosition;
                 InvalidateViewer();
+                OnPropertyChanged(new PropertyChangedEventArgs("ScrollingPosition"));
             }
         }
 
@@ -1754,41 +2003,49 @@ namespace Aurigma.GraphicsMill.WinControls
         public void ClearHistory()
         {
             _objectHost.ClearHistory();
+            RefreshUndoRedoBindingState(false);
         }
 
         public void ClearUndoHistory()
         {
             _objectHost.ClearUndoHistory();
+            RefreshUndoRedoBindingState(false);
         }
 
         public void ClearRedoHistory()
         {
             _objectHost.ClearRedoHistory();
+            RefreshUndoRedoBindingState(false);
         }
 
         public void SaveState()
         {
             _objectHost.SaveState();
+            RefreshUndoRedoBindingState(false);
         }
 
         public void Undo()
         {
             _objectHost.Undo();
+            RefreshUndoRedoBindingState(false);
         }
 
         public void Undo(int undoStepCount)
         {
             _objectHost.Undo(undoStepCount);
+            RefreshUndoRedoBindingState(false);
         }
 
         public void Redo()
         {
             _objectHost.Redo();
+            RefreshUndoRedoBindingState(false);
         }
 
         public void Redo(int redoStepCount)
         {
             _objectHost.Redo(redoStepCount);
+            RefreshUndoRedoBindingState(false);
         }
 
         [System.ComponentModel.Browsable(true)]
@@ -1803,6 +2060,7 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _objectHost.UndoRedoTrackingEnabled = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("UndoRedoTrackingEnabled"));
             }
         }
 
@@ -1818,6 +2076,8 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _objectHost.UndoRedoEnabled = value;
+                RefreshUndoRedoBindingState(false);
+                OnPropertyChanged(new PropertyChangedEventArgs("UndoRedoEnabled"));
             }
         }
 
@@ -1833,9 +2093,12 @@ namespace Aurigma.GraphicsMill.WinControls
             set
             {
                 _objectHost.MaxUndoStepCount = value;
+                RefreshUndoRedoBindingState(false);
+                OnPropertyChanged(new PropertyChangedEventArgs("MaxUndoStepCount"));
             }
         }
 
+        [System.ComponentModel.Bindable(true)]
         [System.ComponentModel.Browsable(false)]
         public int UndoStepCount
         {
@@ -1845,6 +2108,7 @@ namespace Aurigma.GraphicsMill.WinControls
             }
         }
 
+        [System.ComponentModel.Bindable(true)]
         [System.ComponentModel.Browsable(false)]
         public int RedoStepCount
         {
@@ -1854,6 +2118,7 @@ namespace Aurigma.GraphicsMill.WinControls
             }
         }
 
+        [System.ComponentModel.Bindable(true)]
         [System.ComponentModel.Browsable(false)]
         public bool CanUndo
         {
@@ -1863,6 +2128,7 @@ namespace Aurigma.GraphicsMill.WinControls
             }
         }
 
+        [System.ComponentModel.Bindable(true)]
         [System.ComponentModel.Browsable(false)]
         public bool CanRedo
         {
@@ -1885,11 +2151,13 @@ namespace Aurigma.GraphicsMill.WinControls
         private void UndoneEventHandler(object sender, System.EventArgs e)
         {
             OnUndone(e);
+            RefreshUndoRedoBindingState(false);
         }
 
         private void RedoneEventHandler(object sender, System.EventArgs e)
         {
             OnRedone(e);
+            RefreshUndoRedoBindingState(false);
         }
 
         protected virtual void OnUndoing(Aurigma.GraphicsMill.StateRestoringEventArgs e)

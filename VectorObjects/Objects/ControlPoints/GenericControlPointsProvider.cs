@@ -1232,14 +1232,14 @@ namespace Aurigma.GraphicsMill.WinControls
             info.AddValue(SerializationNames.GcppDragEnabled, _dragEnabled);
 
             // Cursors
-            info.AddValue(SerializationNames.GcppResizeWECursor, _resizeWECursor);
-            info.AddValue(SerializationNames.GcppResizeNSCursor, _resizeNSCursor);
-            info.AddValue(SerializationNames.GcppResizeNWSECursor, _resizeNWSECursor);
-            info.AddValue(SerializationNames.GcppResizeNESWCursor, _resizeNESWCursor);
-            info.AddValue(SerializationNames.GcppRotateCenterCursor, _rotateCenterCursor);
-            info.AddValue(SerializationNames.GcppRotatePointCursor, _rotatePointCursor);
-            info.AddValue(SerializationNames.GcppSkewCursor, _skewCursor);
-            info.AddValue(SerializationNames.GcppDragCursor, _dragCursor);
+            info.AddValue(SerializationNames.GcppResizeWECursor, SerializeCursor(_resizeWECursor));
+            info.AddValue(SerializationNames.GcppResizeNSCursor, SerializeCursor(_resizeNSCursor));
+            info.AddValue(SerializationNames.GcppResizeNWSECursor, SerializeCursor(_resizeNWSECursor));
+            info.AddValue(SerializationNames.GcppResizeNESWCursor, SerializeCursor(_resizeNESWCursor));
+            info.AddValue(SerializationNames.GcppRotateCenterCursor, SerializeCursor(_rotateCenterCursor));
+            info.AddValue(SerializationNames.GcppRotatePointCursor, SerializeCursor(_rotatePointCursor));
+            info.AddValue(SerializationNames.GcppSkewCursor, SerializeCursor(_skewCursor));
+            info.AddValue(SerializationNames.GcppDragCursor, SerializeCursor(_dragCursor));
 
             // Control point types
             SaveControlPointPrototype(info, SerializationNames.GcppMajorResizePointPrototype, _majorResizePointPrototype);
@@ -1262,14 +1262,14 @@ namespace Aurigma.GraphicsMill.WinControls
             _dragEnabled = info.GetBoolean(SerializationNames.GcppDragEnabled);
 
             // Cursors
-            _resizeWECursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppResizeWECursor, typeof(System.Windows.Forms.Cursor));
-            _resizeNSCursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppResizeNSCursor, typeof(System.Windows.Forms.Cursor));
-            _resizeNWSECursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppResizeNWSECursor, typeof(System.Windows.Forms.Cursor));
-            _resizeNESWCursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppResizeNESWCursor, typeof(System.Windows.Forms.Cursor));
-            _rotateCenterCursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppRotateCenterCursor, typeof(System.Windows.Forms.Cursor));
-            _rotatePointCursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppRotatePointCursor, typeof(System.Windows.Forms.Cursor));
-            _skewCursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppSkewCursor, typeof(System.Windows.Forms.Cursor));
-            _dragCursor = (System.Windows.Forms.Cursor)info.GetValue(SerializationNames.GcppDragCursor, typeof(System.Windows.Forms.Cursor));
+            _resizeWECursor = DeserializeCursor(info, SerializationNames.GcppResizeWECursor, System.Windows.Forms.Cursors.SizeWE);
+            _resizeNSCursor = DeserializeCursor(info, SerializationNames.GcppResizeNSCursor, System.Windows.Forms.Cursors.SizeNS);
+            _resizeNWSECursor = DeserializeCursor(info, SerializationNames.GcppResizeNWSECursor, System.Windows.Forms.Cursors.SizeNWSE);
+            _resizeNESWCursor = DeserializeCursor(info, SerializationNames.GcppResizeNESWCursor, System.Windows.Forms.Cursors.SizeNESW);
+            _rotateCenterCursor = DeserializeCursor(info, SerializationNames.GcppRotateCenterCursor, System.Windows.Forms.Cursors.Cross);
+            _rotatePointCursor = DeserializeCursor(info, SerializationNames.GcppRotatePointCursor, System.Windows.Forms.Cursors.Arrow);
+            _skewCursor = DeserializeCursor(info, SerializationNames.GcppSkewCursor, System.Windows.Forms.Cursors.SizeAll);
+            _dragCursor = DeserializeCursor(info, SerializationNames.GcppDragCursor, System.Windows.Forms.Cursors.Default);
 
             // Control point types
             LoadControlPointPrototype(info, SerializationNames.GcppMajorResizePointPrototype, ref _majorResizePointPrototype);
@@ -1284,6 +1284,73 @@ namespace Aurigma.GraphicsMill.WinControls
         {
             if (prototype.GetType().IsSerializable)
                 info.AddValue(key, prototype);
+        }
+
+        private static int SerializeCursor(System.Windows.Forms.Cursor cursor)
+        {
+            if (cursor == null)
+                return 0;
+
+            if (cursor == System.Windows.Forms.Cursors.Default)
+                return 1;
+            if (cursor == System.Windows.Forms.Cursors.Arrow)
+                return 2;
+            if (cursor == System.Windows.Forms.Cursors.Cross)
+                return 3;
+            if (cursor == System.Windows.Forms.Cursors.SizeWE)
+                return 4;
+            if (cursor == System.Windows.Forms.Cursors.SizeNS)
+                return 5;
+            if (cursor == System.Windows.Forms.Cursors.SizeNWSE)
+                return 6;
+            if (cursor == System.Windows.Forms.Cursors.SizeNESW)
+                return 7;
+            if (cursor == System.Windows.Forms.Cursors.SizeAll)
+                return 8;
+
+            return 0;
+        }
+
+        private static System.Windows.Forms.Cursor DeserializeCursor(System.Runtime.Serialization.SerializationInfo info, string key, System.Windows.Forms.Cursor fallback)
+        {
+            try
+            {
+                int cursorId = info.GetInt32(key);
+                switch (cursorId)
+                {
+                    case 1:
+                        return System.Windows.Forms.Cursors.Default;
+                    case 2:
+                        return System.Windows.Forms.Cursors.Arrow;
+                    case 3:
+                        return System.Windows.Forms.Cursors.Cross;
+                    case 4:
+                        return System.Windows.Forms.Cursors.SizeWE;
+                    case 5:
+                        return System.Windows.Forms.Cursors.SizeNS;
+                    case 6:
+                        return System.Windows.Forms.Cursors.SizeNWSE;
+                    case 7:
+                        return System.Windows.Forms.Cursors.SizeNESW;
+                    case 8:
+                        return System.Windows.Forms.Cursors.SizeAll;
+                    default:
+                        return fallback;
+                }
+            }
+            catch (System.Runtime.Serialization.SerializationException)
+            {
+                // Backward compatibility for old serialized states that stored Cursor objects directly.
+                try
+                {
+                    System.Windows.Forms.Cursor cursor = (System.Windows.Forms.Cursor)info.GetValue(key, typeof(System.Windows.Forms.Cursor));
+                    return cursor ?? fallback;
+                }
+                catch (System.Runtime.Serialization.SerializationException)
+                {
+                    return fallback;
+                }
+            }
         }
 
         private void LoadControlPointPrototype(System.Runtime.Serialization.SerializationInfo info, string key, ref ControlPoint prototype)

@@ -296,6 +296,7 @@ namespace Aurigma.GraphicsMill.WinControls
 
         private void LayerChangedHandler(object sender, LayerChangedEventArgs e)
         {
+            // Keep the original event args instance so Origin is preserved for subscribers.
             OnLayerChanged(e);
         }
 

@@ -108,7 +108,7 @@
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Aurigma.GraphicsMill, Version=11.6.9.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
+    <Reference Include="Aurigma.GraphicsMill, Version=11.6.27.0, Culture=neutral, PublicKeyToken=f4bbbf243f314012, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\MPOLayout\src\framework\Aurigma.GraphicsMill.dll</HintPath>
     </Reference>

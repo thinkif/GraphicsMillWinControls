@@ -297,13 +297,28 @@ namespace Aurigma.GraphicsMill.WinControls
         LockStatusChanged
     }
 
+    public enum LayerOperationOrigin
+    {
+        Normal,
+        Undo,
+        Redo
+    }
+
     public class LayerChangedEventArgs : LayerEventArgs
     {
+        internal static LayerOperationOrigin CurrentOperationOrigin = LayerOperationOrigin.Normal;
+
         public LayerChangedEventArgs(Layer layer, IVObject changedObj, LayerChangeType type)
+            : this(layer, changedObj, type, CurrentOperationOrigin)
+        {
+        }
+
+        public LayerChangedEventArgs(Layer layer, IVObject changedObj, LayerChangeType type, LayerOperationOrigin origin)
             : base(layer)
         {
             _obj = changedObj;
             _type = type;
+            _origin = origin;
         }
 
         public IVObject VObject
@@ -322,8 +337,17 @@ namespace Aurigma.GraphicsMill.WinControls
             }
         }
 
+        public LayerOperationOrigin Origin
+        {
+            get
+            {
+                return _origin;
+            }
+        }
+
         private LayerChangeType _type;
         private IVObject _obj;
+        private LayerOperationOrigin _origin;
     }
 
     public delegate void LayerChangedEventHandler(object sender, LayerChangedEventArgs e);
