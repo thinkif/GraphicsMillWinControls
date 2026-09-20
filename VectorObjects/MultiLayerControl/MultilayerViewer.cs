@@ -1065,10 +1065,6 @@ namespace Aurigma.GraphicsMill.WinControls
                 DrawWorkspaceBorder();
                 DrawControlBorder(hdc);
                 DrawLayers(e.ClipRectangle);
-                DrawDesigner();
-
-                using (System.Drawing.Graphics g = _controlBitmap.GetGdiPlusGraphics())
-                    OnDoubleBufferPaint(new System.Windows.Forms.PaintEventArgs(g, e.ClipRectangle));
 
                 e.Graphics.ReleaseHdc(hdc);
 
@@ -1077,6 +1073,9 @@ namespace Aurigma.GraphicsMill.WinControls
                 {
                     clip.DrawOn(e.Graphics, e.ClipRectangle.Left, e.ClipRectangle.Top, Aurigma.GraphicsMill.Transforms.CombineMode.Copy);
                 }
+
+                DrawDesigner(e.Graphics);
+                OnDoubleBufferPaint(new System.Windows.Forms.PaintEventArgs(e.Graphics, e.ClipRectangle));
             }
             finally
             {
@@ -1090,6 +1089,12 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 _controlGdiGraphics.Dispose();
                 _controlGdiGraphics = null;
+            }
+
+            if (_controlBitmap != null)
+            {
+                _controlBitmap.Dispose();
+                _controlBitmap = null;
             }
 
             _controlBitmap = new Aurigma.GraphicsMill.Bitmap(this.Width, this.Height, Aurigma.GraphicsMill.PixelFormat.Format24bppRgb);
@@ -1125,14 +1130,23 @@ namespace Aurigma.GraphicsMill.WinControls
         {
             if (_workspaceBorderEnabled)
             {
-                System.Drawing.Pen pen = new System.Drawing.Pen(_workspaceBorderColor, _workspaceBorderWidth);
-                pen.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset;
+                Aurigma.GraphicsMill.Drawing.Pen pen = new Aurigma.GraphicsMill.Drawing.Pen(_workspaceBorderColor, _workspaceBorderWidth);
 
                 System.Drawing.Rectangle viewportBorder = this.GetViewportBounds();
                 if (viewportBorder.Width > 0 || viewportBorder.Height > 0)
                 {
+                    // The drawing engine has no PenAlignment.Inset, so the centered pen is shifted inside
+                    // the border rectangle by half of its width to reproduce the original inset look.
                     viewportBorder.Inflate(_workspaceBorderWidth, _workspaceBorderWidth);
-                    _controlGdiGraphics.DrawRectangle(pen, viewportBorder);
+
+                    float inset = _workspaceBorderWidth / 2f;
+                    var borderRectangle = new System.Drawing.RectangleF(
+                        viewportBorder.X + inset,
+                        viewportBorder.Y + inset,
+                        viewportBorder.Width - _workspaceBorderWidth,
+                        viewportBorder.Height - _workspaceBorderWidth);
+
+                    _controlGdiGraphics.DrawRectangle(pen, borderRectangle);
                 }
             }
         }
@@ -1175,22 +1189,26 @@ namespace Aurigma.GraphicsMill.WinControls
 
             _viewportRenderer.Render(_viewportCanvas, base.ZoomInternal, viewport, renderingRegion);
 
-            using (var ct = new Aurigma.GraphicsMill.Transforms.Crop(canvasSourceRectangle))
-            using (var cropResult = ct.Apply(_viewportCanvas))
+            if (canvasSourceRectangle.X == 0 && canvasSourceRectangle.Y == 0 &&
+                canvasSourceRectangle.Width == _viewportCanvas.Width && canvasSourceRectangle.Height == _viewportCanvas.Height)
             {
-                _controlGdiGraphics.DrawImage(cropResult, invalidationRectangle.Left, invalidationRectangle.Top, Aurigma.GraphicsMill.Transforms.CombineMode.Copy);
+                // The whole viewport canvas is drawn - no need to copy it through an intermediate crop.
+                _controlGdiGraphics.DrawImage(_viewportCanvas, invalidationRectangle.Left, invalidationRectangle.Top);
+            }
+            else
+            {
+                using (var ct = new Aurigma.GraphicsMill.Transforms.Crop(canvasSourceRectangle))
+                using (var cropResult = ct.Apply(_viewportCanvas))
+                {
+                    _controlGdiGraphics.DrawImage(cropResult, invalidationRectangle.Left, invalidationRectangle.Top);
+                }
             }
         }
 
-        private void DrawDesigner()
+        private void DrawDesigner(System.Drawing.Graphics graphics)
         {
             if (_objectHost.CurrentDesigner != null)
-            {
-                using (System.Drawing.Graphics g = _controlBitmap.GetGdiPlusGraphics())
-                {
-                    _objectHost.CurrentDesigner.Draw(g);
-                }
-            }
+                _objectHost.CurrentDesigner.Draw(graphics);
         }
 
         public override void InvalidateViewer()

@@ -13,6 +13,7 @@ namespace Aurigma.GraphicsMill.WinControls
 
         private Layer _layer;
         private float _renderingResolution;
+        private System.Drawing.Bitmap _scratchBitmap;
 
         #endregion "------- Member variables ---------"
 
@@ -27,6 +28,11 @@ namespace Aurigma.GraphicsMill.WinControls
 
         public void Dispose()
         {
+            if (_scratchBitmap != null)
+            {
+                _scratchBitmap.Dispose();
+                _scratchBitmap = null;
+            }
         }
 
         public void InvalidateLayerRegion(Layer layer, System.Drawing.RectangleF invalidationRectangle)
@@ -46,36 +52,22 @@ namespace Aurigma.GraphicsMill.WinControls
             renderingRegion.X -= viewport.X;
             renderingRegion.Y -= viewport.Y;
 
-            System.IntPtr dc = System.IntPtr.Zero;
-            System.IntPtr oldDc = System.IntPtr.Zero;
-            System.Drawing.Graphics g = null;
-            Aurigma.GraphicsMill.Drawing.Graphics gdiGraphics = null;
-
-            try
+            // The legacy GDI-based graphics accessor (Bitmap.GetGraphics/GetGdiPlusGraphics) was removed in
+            // Graphics Mill 12, so VObjects are rendered into a GDI+ bitmap and then alpha-blended onto the
+            // canvas using Bitmap.Draw(overlay, 0, 0, CombineMode.Alpha), which preserves the original
+            // GDI+ blending behavior. The scratch bitmap is reused between renders to avoid allocating a
+            // full-canvas bitmap on every repaint.
+            if (_scratchBitmap == null || _scratchBitmap.Width != canvas.Width || _scratchBitmap.Height != canvas.Height)
             {
-                // Read MSDN KB article "GDI & GDI+ interoperability". We should create System.Drawing.Graphics
-                // from DC, not from Bitmap to avoid getting sentinel bitmap. Otherwise we will not be able to
-                // blend images using Aurigma.GraphicsMill.Bitmap.Draw(System.Drawing.Graphics g, ...) method.
-                //
-                // The first branch is used when we render to the screen. In this case canvas has 24bppRgb format
-                // and we just use its GDI graphics (most probably it has been already created by caching renderer) to
-                // obtain HDC. Second branch is used when we render control content to 32bppArgb image - in such case
-                // we cannot create GDI graphics and have to manually create DC and select canvas.Handle into it.
-                if (canvas.PixelFormat == PixelFormat.Format24bppRgb)
-                {
-                    gdiGraphics = canvas.GetGraphics();
-                    g = System.Drawing.Graphics.FromHdc(gdiGraphics.GetDC());
-                }
-                else
-                {
-                    dc = NativeMethods.CreateCompatibleDC(System.IntPtr.Zero);
+                if (_scratchBitmap != null)
+                    _scratchBitmap.Dispose();
 
-                    if (dc == System.IntPtr.Zero)
-                        throw new Aurigma.GraphicsMill.UnexpectedException(StringResources.GetString("Cannot create compatible DC."));
+                _scratchBitmap = new System.Drawing.Bitmap(canvas.Width, canvas.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            }
 
-                    g = System.Drawing.Graphics.FromHdc(dc);
-                }
-
+            using (var g = System.Drawing.Graphics.FromImage(_scratchBitmap))
+            {
+                g.Clear(System.Drawing.Color.Transparent);
                 g.SetClip(renderingRegion);
 
                 for (int i = 0; i < _layer.VObjects.Count; i++)
@@ -86,19 +78,10 @@ namespace Aurigma.GraphicsMill.WinControls
                         _layer.VObjects[i].Draw(renderingRegion, g, coordinateMapper);
                 }
             }
-            finally
+
+            using (var overlay = new Aurigma.GraphicsMill.Bitmap(_scratchBitmap))
             {
-                if (g != null)
-                    g.Dispose();
-
-                if (gdiGraphics != null)
-                    gdiGraphics.Dispose();
-
-                if (dc != System.IntPtr.Zero)
-                {
-                    NativeMethods.SelectObject(dc, oldDc);
-                    NativeMethods.DeleteDC(dc);
-                }
+                canvas.Draw(overlay, 0, 0, Aurigma.GraphicsMill.Transforms.CombineMode.Alpha);
             }
         }
     }

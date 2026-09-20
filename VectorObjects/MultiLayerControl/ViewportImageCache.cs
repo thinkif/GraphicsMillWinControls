@@ -100,7 +100,12 @@ namespace Aurigma.GraphicsMill.WinControls
             srcRect.Offset(-_viewport.X, -_viewport.Y);
             dstRect.Offset(-viewport.X, -viewport.Y);
 
-            g.DrawImage(_image, dstRect, srcRect, Aurigma.GraphicsMill.Transforms.CombineMode.Copy, 1.0f, Aurigma.GraphicsMill.Transforms.ResizeInterpolationMode.Low);
+            using (var ct = new Aurigma.GraphicsMill.Transforms.Crop(srcRect))
+            using (var cropResult = ct.Apply(_image))
+            {
+                g.DrawImage(cropResult, dstRect.X, dstRect.Y);
+            }
+
             return intersection;
         }
 

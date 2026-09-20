@@ -854,17 +854,28 @@ namespace Aurigma.GraphicsMill.WinControls
         {
             try
             {
-                using (var gr = _canvasBitmap.GetGdiPlusGraphics())
-                using (var aGr = _canvasBitmap.GetGraphics())
+                using (var graphics = _canvasBitmap.GetGraphics())
                 {
-                    DrawBitmap(aGr);
-                    DrawWorkspaceBorder(aGr);
-                    if (base.BorderStyle != System.Windows.Forms.Border3DStyle.Flat)
-                        DrawControlBorder(aGr.GetDC());
-                    OnDoubleBufferPaint(new System.Windows.Forms.PaintEventArgs(gr, GetCanvasOutputBounds()));
+                    DrawBitmap(graphics);
+                    DrawWorkspaceBorder(graphics);
                 }
 
-                _canvasBitmap.DrawOn(e.Graphics, GetCanvasBoundsWithBorder(), CombineMode.Copy, 1.0f, ResizeInterpolationMode.Medium);
+                _canvasBitmap.DrawOn(e.Graphics, GetCanvasBoundsWithBorder(), CombineMode.Copy, 1.0f, GetBlitInterpolationMode());
+
+                if (base.BorderStyle != System.Windows.Forms.Border3DStyle.Flat)
+                {
+                    System.IntPtr hdc = e.Graphics.GetHdc();
+                    try
+                    {
+                        DrawControlBorder(hdc);
+                    }
+                    finally
+                    {
+                        e.Graphics.ReleaseHdc(hdc);
+                    }
+                }
+
+                OnDoubleBufferPaint(new System.Windows.Forms.PaintEventArgs(e.Graphics, GetCanvasOutputBounds()));
             }
             finally
             {
@@ -876,6 +887,20 @@ namespace Aurigma.GraphicsMill.WinControls
 
         protected override void OnPaintBackground(PaintEventArgs pevent)
         {
+        }
+
+        /// <summary>
+        /// Returns the interpolation mode for blitting the canvas onto the control. When the canvas and the
+        /// destination rectangle have the same size no resampling is required, so a fast (exact) mode is used.
+        /// </summary>
+        private ResizeInterpolationMode GetBlitInterpolationMode()
+        {
+            System.Drawing.Rectangle destinationBounds = GetCanvasBoundsWithBorder();
+
+            if (_canvasBitmap != null && _canvasBitmap.Width == destinationBounds.Width && _canvasBitmap.Height == destinationBounds.Height)
+                return ResizeInterpolationMode.NearestNeighbour;
+
+            return ResizeInterpolationMode.Medium;
         }
 
         protected override void OnSizeChanged(EventArgs e)
@@ -1824,12 +1849,8 @@ namespace Aurigma.GraphicsMill.WinControls
                 return;
             }
 
-            Aurigma.GraphicsMill.Transforms.CombineMode combineMode = Aurigma.GraphicsMill.Transforms.CombineMode.Copy;
             Aurigma.GraphicsMill.Transforms.ResizeInterpolationMode interpolationMode;
             System.Drawing.Rectangle clientRectangle = GetCanvasOutputBounds();
-
-            if (_alphaEnabled && this.Bitmap.HasAlpha)
-                combineMode = Aurigma.GraphicsMill.Transforms.CombineMode.Alpha;
 
             if (_zoomQuality == ZoomQuality.ShrinkHighStretchLow)
             {
@@ -1877,78 +1898,166 @@ namespace Aurigma.GraphicsMill.WinControls
                 crop.Height -= shiftY;
             }
 
-            using (var cropBitmap = Crop.Apply(this.Bitmap, crop))
+            var preparedImage = PrepareImageForDisplay(crop, clientRectangle);
+            try
             {
-                cropBitmap.ApplyTransform(_resize);
-                cropBitmap.ColorManagement.ColorManagementEngine = this.Bitmap.ColorManagement.ColorManagementEngine;
-                cropBitmap.DrawOn(graphics.GetDC(), clientRectangle, combineMode, 1.0f, interpolationMode);
+                DrawBitmapContent(graphics, preparedImage ?? this.Bitmap, clientRectangle);
+            }
+            finally
+            {
+                if (preparedImage != null)
+                    preparedImage.Dispose();
             }
 
             _scrollingShift.X = 0;
             _scrollingShift.Y = 0;
         }
 
+        /// <summary>
+        /// Crops and resizes the source image for the current viewport. Both steps are skipped when they
+        /// would not change anything (the whole image is visible and/or it already has the target size),
+        /// which avoids copying and resizing the entire image on every repaint.
+        /// Returns null when the source image can be drawn directly.
+        /// </summary>
+        private Aurigma.GraphicsMill.Bitmap PrepareImageForDisplay(System.Drawing.Rectangle crop, System.Drawing.Rectangle clientRectangle)
+        {
+            bool cropIsWholeImage = crop.X == 0 && crop.Y == 0 && crop.Width == this.Bitmap.Width && crop.Height == this.Bitmap.Height;
+
+            Aurigma.GraphicsMill.Bitmap result = null;
+
+            if (!cropIsWholeImage)
+            {
+                result = Crop.Apply(this.Bitmap, crop);
+
+                if (result.Width == clientRectangle.Width && result.Height == clientRectangle.Height)
+                {
+                    result.ColorManagement.ColorManagementEngine = this.Bitmap.ColorManagement.ColorManagementEngine;
+                    return result;
+                }
+            }
+            else if (this.Bitmap.Width == clientRectangle.Width && this.Bitmap.Height == clientRectangle.Height)
+            {
+                // Nothing to crop and nothing to resize - draw the original image as is.
+                return null;
+            }
+
+            var resizedImage = _resize.Apply(result ?? this.Bitmap);
+
+            if (result != null)
+                result.Dispose();
+
+            resizedImage.ColorManagement.ColorManagementEngine = this.Bitmap.ColorManagement.ColorManagementEngine;
+            return resizedImage;
+        }
+
+        /// <summary>
+        /// Draws the image onto the canvas. Images with color-managed CMYK, Lab, spot and extended pixel
+        /// formats are converted to a GDI-compatible ARGB bitmap through the regular color management
+        /// pipeline first, so that the result matches the pre-12 rendering (including transparency).
+        /// </summary>
+        private void DrawBitmapContent(Aurigma.GraphicsMill.Drawing.Graphics graphics, Aurigma.GraphicsMill.Bitmap image, System.Drawing.Rectangle destinationRectangle)
+        {
+            Aurigma.GraphicsMill.Bitmap imageToDraw = image;
+            Aurigma.GraphicsMill.Bitmap convertedImage = null;
+            Aurigma.GraphicsMill.Bitmap opaqueImage = null;
+
+            try
+            {
+                if (RequiresGdiCompatibleConversion(image.PixelFormat))
+                {
+                    using (var converter = new Aurigma.GraphicsMill.Transforms.ColorConverter())
+                    {
+                        converter.DestinationPixelFormat = PixelFormat.Format32bppArgb;
+                        converter.ColorManagementEngine = image.ColorManagement.ColorManagementEngine;
+                        convertedImage = converter.Apply(image);
+                    }
+
+                    imageToDraw = convertedImage;
+                }
+
+                // When alpha is disabled the transparent areas must be copied as is (like the old
+                // CombineMode.Copy behavior), so the alpha channel is discarded before drawing.
+                if (!_alphaEnabled && imageToDraw.HasAlpha)
+                {
+                    opaqueImage = new Aurigma.GraphicsMill.Bitmap(imageToDraw);
+                    opaqueImage.Channels.RemoveAlpha();
+                    imageToDraw = opaqueImage;
+                }
+
+                graphics.DrawImage(imageToDraw, destinationRectangle.Left, destinationRectangle.Top);
+            }
+            finally
+            {
+                if (opaqueImage != null)
+                    opaqueImage.Dispose();
+                if (convertedImage != null)
+                    convertedImage.Dispose();
+            }
+        }
+
+        private static bool RequiresGdiCompatibleConversion(Aurigma.GraphicsMill.PixelFormat pixelFormat)
+        {
+            return pixelFormat.IsCmyk || pixelFormat.IsExtended || pixelFormat.IsLab || pixelFormat.IsSpot;
+        }
+
         private void DrawBitmapBackground(Aurigma.GraphicsMill.Drawing.Graphics graphics, System.Drawing.Rectangle renderingRectangle, System.Drawing.Rectangle partRectangle)
         {
             if (_alphaEnabled && this.Bitmap != null && this.Bitmap.HasAlpha)
             {
-                graphics.SetClip(partRectangle);
-
                 Aurigma.GraphicsMill.Drawing.SolidBrush brush1 = new Aurigma.GraphicsMill.Drawing.SolidBrush(_workspaceBackColor1);
-                Aurigma.GraphicsMill.Drawing.SolidBrush brush2 = new Aurigma.GraphicsMill.Drawing.SolidBrush(_workspaceBackColor2);
 
-                try
+                if (_viewportBackgroundStyle == WorkspaceBackgroundStyle.Grid)
                 {
-                    if (_viewportBackgroundStyle == WorkspaceBackgroundStyle.Grid)
+                    renderingRectangle.Inflate(_scrollingPosition.X % (2 * backgroundGridCell), _scrollingPosition.Y % (2 * backgroundGridCell));
+
+                    if (_canvasGrid == null || _canvasGrid.Width != this.Width + 4 * backgroundGridCell || _canvasGrid.Height != this.Height + 4 * backgroundGridCell)
                     {
-                        renderingRectangle.Inflate(_scrollingPosition.X % (2 * backgroundGridCell), _scrollingPosition.Y % (2 * backgroundGridCell));
+                        if (_canvasGrid != null)
+                            _canvasGrid.Dispose();
 
-                        if (_canvasGrid == null || _canvasGrid.Width != this.Width + 4 * backgroundGridCell || _canvasGrid.Height != this.Height + 4 * backgroundGridCell)
+                        using (var tmpBitmap = new Aurigma.GraphicsMill.Bitmap(this.Width + backgroundGridCell * 6, backgroundGridCell * 2, Aurigma.GraphicsMill.PixelFormat.Format24bppRgb))
+                        using (var tmpCanvas = tmpBitmap.GetGraphics())
                         {
-                            if (_canvasGrid != null)
-                                _canvasGrid.Dispose();
+                            tmpBitmap.Fill(_workspaceBackColor2);
 
-                            using (var tmpBitmap = new Aurigma.GraphicsMill.Bitmap(this.Width + backgroundGridCell * 6, backgroundGridCell * 2, Aurigma.GraphicsMill.PixelFormat.Format24bppRgb))
-                            using (var tmpCanvas = tmpBitmap.GetGraphics())
+                            for (int i = 0; i < tmpBitmap.Width; i += 2 * backgroundGridCell)
                             {
-                                tmpBitmap.Fill(_workspaceBackColor2);
+                                tmpCanvas.FillRectangle(brush1, i, 0, backgroundGridCell, backgroundGridCell);
+                                tmpCanvas.FillRectangle(brush1, i + backgroundGridCell, backgroundGridCell, backgroundGridCell, backgroundGridCell);
+                            }
 
-                                for (int i = 0; i < tmpBitmap.Width; i += 2 * backgroundGridCell)
-                                {
-                                    tmpCanvas.FillRectangle(brush1, i, 0, backgroundGridCell, backgroundGridCell);
-                                    tmpCanvas.FillRectangle(brush1, i + backgroundGridCell, backgroundGridCell, backgroundGridCell, backgroundGridCell);
-                                }
+                            _canvasGrid = new Aurigma.GraphicsMill.Bitmap(this.Width + 4 * backgroundGridCell, this.Height + 4 * backgroundGridCell, Aurigma.GraphicsMill.PixelFormat.Format24bppRgb);
 
-                                _canvasGrid = new Aurigma.GraphicsMill.Bitmap(this.Width + 4 * backgroundGridCell, this.Height + 4 * backgroundGridCell, Aurigma.GraphicsMill.PixelFormat.Format24bppRgb);
-
-                                using (var canvasGraphics = _canvasGrid.GetGraphics())
-                                {
-                                    for (int y = 0; y < _canvasGrid.Height; y += 2 * backgroundGridCell)
-                                    {
-                                        canvasGraphics.DrawImage(tmpBitmap, 0, y, CombineMode.Copy);
-                                    }
-                                }
+                            _canvasGrid.Draw(tmpBitmap, 0, 0, Aurigma.GraphicsMill.Transforms.CombineMode.Copy);
+                            for (int y = backgroundGridCell * 2; y < _canvasGrid.Height; y += 2 * backgroundGridCell)
+                            {
+                                _canvasGrid.Draw(tmpBitmap, 0, y, Aurigma.GraphicsMill.Transforms.CombineMode.Copy);
                             }
                         }
+                    }
 
-                        using (var crop = new Crop(0, 0, renderingRectangle.Width, renderingRectangle.Height))
+                    // The grid is drawn at the (inflated) renderingRectangle location, so only the part
+                    // intersecting the visible area should be rendered (the drawing engine has no rectangle clip).
+                    System.Drawing.Rectangle visibleRectangle = System.Drawing.Rectangle.Intersect(renderingRectangle, partRectangle);
+
+                    if (visibleRectangle.Width > 0 && visibleRectangle.Height > 0)
+                    {
+                        var sourceRectangle = new System.Drawing.Rectangle(visibleRectangle.X - renderingRectangle.X, visibleRectangle.Y - renderingRectangle.Y, visibleRectangle.Width, visibleRectangle.Height);
+
+                        using (var crop = new Crop(sourceRectangle))
                         using (var croppedGrid = crop.Apply(_canvasGrid))
                         {
-                            graphics.DrawImage(croppedGrid, renderingRectangle.Left, renderingRectangle.Top, CombineMode.Copy);
+                            graphics.DrawImage(croppedGrid, visibleRectangle.Left, visibleRectangle.Top);
                         }
                     }
-                    else if (_viewportBackgroundStyle == WorkspaceBackgroundStyle.Solid)
-                    {
-                        graphics.FillRectangle(brush1.ToGdiPlusBrush(), partRectangle);
-                    }
-                    else
-                    {
-                        graphics.FillRectangle(new System.Drawing.SolidBrush(BackColor), partRectangle);
-                    }
                 }
-                finally
+                else if (_viewportBackgroundStyle == WorkspaceBackgroundStyle.Solid)
                 {
-                    graphics.ResetClip();
+                    graphics.FillRectangle(brush1, partRectangle);
+                }
+                else
+                {
+                    graphics.FillRectangle(new Aurigma.GraphicsMill.Drawing.SolidBrush(BackColor), partRectangle);
                 }
             }
         }
@@ -1962,16 +2071,25 @@ namespace Aurigma.GraphicsMill.WinControls
         {
             if (_workspaceBorderEnabled && WorkspaceBorderWidth > 0)
             {
-                System.Drawing.Pen pen = new System.Drawing.Pen(_workspaceBorderColor, _viewportBorderWidth);
-                pen.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset;
+                Aurigma.GraphicsMill.Drawing.Pen pen = new Aurigma.GraphicsMill.Drawing.Pen(_workspaceBorderColor, _viewportBorderWidth);
 
                 System.Drawing.Rectangle bitmapRectangle = GetCanvasOutputBounds();
                 bitmapRectangle = new System.Drawing.Rectangle(bitmapRectangle.X - _scrollingPosition.X, bitmapRectangle.Y - _scrollingPosition.Y, _contentSize.Width - 1, _contentSize.Height - 1);
 
                 if (bitmapRectangle.Width > 0 || bitmapRectangle.Height > 0)
                 {
+                    // The drawing engine has no PenAlignment.Inset, so the centered pen is shifted inside
+                    // the border rectangle by half of its width to reproduce the original inset look.
                     bitmapRectangle.Inflate(_viewportBorderWidth, _viewportBorderWidth);
-                    graphics.DrawRectangle(pen, bitmapRectangle);
+
+                    float inset = _viewportBorderWidth / 2f;
+                    var borderRectangle = new System.Drawing.RectangleF(
+                        bitmapRectangle.X + inset,
+                        bitmapRectangle.Y + inset,
+                        bitmapRectangle.Width - _viewportBorderWidth,
+                        bitmapRectangle.Height - _viewportBorderWidth);
+
+                    graphics.DrawRectangle(pen, borderRectangle);
                 }
             }
         }

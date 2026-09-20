@@ -320,7 +320,8 @@ namespace Aurigma.GraphicsMill.WinControls
             Aurigma.GraphicsMill.Bitmap result = new Aurigma.GraphicsMill.Bitmap(controlRectangle.Width, controlRectangle.Height, Aurigma.GraphicsMill.PixelFormat.Format32bppArgb, Aurigma.GraphicsMill.RgbColor.Transparent);
             try
             {
-                using (var g = result.GetGdiPlusGraphics())
+                using (var screenBitmap = new System.Drawing.Bitmap(controlRectangle.Width, controlRectangle.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+                using (var g = System.Drawing.Graphics.FromImage(screenBitmap))
                 {
                     CoordinateMapper coordMapper = new CoordinateMapper();
                     coordMapper.Resolution = renderingResolution;
@@ -330,6 +331,11 @@ namespace Aurigma.GraphicsMill.WinControls
                     _alwaysUseGdiPlus = true;
                     DrawContent(g, controlRectangle, coordMapper);
                     _alwaysUseGdiPlus = false;
+
+                    using (var overlay = new Aurigma.GraphicsMill.Bitmap(screenBitmap))
+                    {
+                        result.Draw(overlay, 0, 0, Aurigma.GraphicsMill.Transforms.CombineMode.Alpha);
+                    }
                 }
             }
             catch

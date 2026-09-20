@@ -1,10 +1,10 @@
 // Copyright (c) 2018 Aurigma Inc. All rights reserved.
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 //
-using Aurigma.GraphicsMill.Drawing;
 using Aurigma.GraphicsMill.Transforms;
 using System;
 using System.Diagnostics;
+using Font = System.Drawing.Font;
 using Point = System.Drawing.Point;
 using Rectangle = System.Drawing.Rectangle;
 using Size = System.Drawing.Size;
@@ -128,7 +128,7 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 if (value == null)
                     throw new ArgumentNullException("HeaderFont");
-                _headerFont = value.ToGdiPlusFont();
+                _headerFont = value;
             }
         }
 
@@ -142,7 +142,7 @@ namespace Aurigma.GraphicsMill.WinControls
             {
                 if (value == null)
                     throw new ArgumentNullException("FooterFont");
-                _footerFont = value.ToGdiPlusFont();
+                _footerFont = value;
             }
         }
 
@@ -229,6 +229,18 @@ namespace Aurigma.GraphicsMill.WinControls
                 if (value == null)
                     throw new ArgumentNullException("BorderPen");
                 _borderPen = value;
+            }
+        }
+
+        public System.Drawing.Drawing2D.PenAlignment BorderPenAlignment
+        {
+            get
+            {
+                return _borderPenAlignment;
+            }
+            set
+            {
+                _borderPenAlignment = value;
             }
         }
 
@@ -900,7 +912,7 @@ namespace Aurigma.GraphicsMill.WinControls
 
         private void PrintBorder(System.Drawing.Graphics graphics, Point leftTopPosition, Size itemSize)
         {
-            _borderPen.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset;
+            _borderPen.Alignment = _borderPenAlignment;
             int width = (int)_borderPen.Width;
 
             if (itemSize.Width >= width && itemSize.Height >= width)
@@ -923,6 +935,8 @@ namespace Aurigma.GraphicsMill.WinControls
         private float _printerResolutionY;
 
         private System.Drawing.Pen _borderPen;
+
+        private System.Drawing.Drawing2D.PenAlignment _borderPenAlignment = System.Drawing.Drawing2D.PenAlignment.Inset;
 
         private string _headerText;
         private string _footerText;

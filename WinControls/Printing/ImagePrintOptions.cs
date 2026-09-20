@@ -1,7 +1,6 @@
 // Copyright (c) 2018 Aurigma Inc. All rights reserved.
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 //
-using Aurigma.GraphicsMill.Drawing;
 using Aurigma.GraphicsMill.Transforms;
 using System;
 using System.ComponentModel;
@@ -22,8 +21,8 @@ namespace Aurigma.GraphicsMill.WinControls
 
             _interpolationMode = ResizeInterpolationMode.Medium;
 
-            _headerFont = new Font("Arial", 10).ToGdiPlusFont();
-            _footerFont = new Font("Arial", 10).ToGdiPlusFont();
+            _headerFont = new System.Drawing.Font("Arial", 10);
+            _footerFont = new System.Drawing.Font("Arial", 10);
             _headerColor = System.Drawing.Color.Black;
             _footerColor = System.Drawing.Color.Black;
             _headerAlignment = System.Drawing.StringAlignment.Center;

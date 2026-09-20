@@ -72,14 +72,17 @@ namespace Aurigma.GraphicsMill.WinControls
             System.Drawing.Rectangle cachedRegion = _viewportCache.GetActualRegion(zoom, viewport);
             System.Drawing.Rectangle[] cachedActualRegions = VObjectsUtils.SubstractRectangle(cachedRegion, invalidatedRect);
 
-            for (int i = 0; i < cachedActualRegions.Length; i++)
+            if (cachedActualRegions.Length > 0)
             {
-                if (cachedActualRegions[i].Width < 1 || cachedActualRegions[i].Height < 1)
-                    continue;
-
                 using (var canvasGdiGraphics = canvas.GetGraphics())
                 {
-                    _viewportCache.DrawCached(canvasGdiGraphics, zoom, viewport, cachedActualRegions[i]);
+                    for (int i = 0; i < cachedActualRegions.Length; i++)
+                    {
+                        if (cachedActualRegions[i].Width < 1 || cachedActualRegions[i].Height < 1)
+                            continue;
+
+                        _viewportCache.DrawCached(canvasGdiGraphics, zoom, viewport, cachedActualRegions[i]);
+                    }
                 }
             }
 

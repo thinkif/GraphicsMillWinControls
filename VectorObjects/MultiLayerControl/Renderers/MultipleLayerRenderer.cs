@@ -118,7 +118,7 @@ namespace Aurigma.GraphicsMill.WinControls
                 Aurigma.GraphicsMill.Drawing.SolidBrush brush0 = new Aurigma.GraphicsMill.Drawing.SolidBrush(_workspaceBackColor1),
                                                         brush1 = new Aurigma.GraphicsMill.Drawing.SolidBrush(_workspaceBackColor2);
 
-                System.Drawing.Rectangle cellRect = new System.Drawing.Rectangle(0, 0, bgGridCellSize, bgGridCellSize);
+                System.Drawing.RectangleF cellRect = new System.Drawing.RectangleF(0, 0, bgGridCellSize, bgGridCellSize);
 
                 int n = (int)System.Math.Ceiling((float)width / (2.0f * bgGridCellSize));
                 for (int i = 0; i < n; i++)
@@ -129,7 +129,7 @@ namespace Aurigma.GraphicsMill.WinControls
                     cellRect.Offset(bgGridCellSize, 0);
                 }
 
-                cellRect.Location = new System.Drawing.Point(0, bgGridCellSize);
+                cellRect.Location = new System.Drawing.PointF(0, bgGridCellSize);
                 for (int i = 0; i < n; i++)
                 {
                     g.FillRectangle(brush1, cellRect);
@@ -156,34 +156,48 @@ namespace Aurigma.GraphicsMill.WinControls
 
                     CreateBackgroundGridTemplate(renderingRegion.Width + gridPatternSize);
 
-                    System.Drawing.Rectangle srcRect = new System.Drawing.Rectangle(0, 0, _bgGridTemplate.Width, _bgGridTemplate.Height),
-                                             dstRect = new System.Drawing.Rectangle(renderingRegion.Location, srcRect.Size);
-                    dstRect.Offset(-viewport.X, -viewport.Y);
-                    dstRect.Offset(-patternOffsetX, -patternOffsetY);
+                    int tileX = screenRect.X - patternOffsetX,
+                        tileY = screenRect.Y - patternOffsetY;
+                    int templateWidth = _bgGridTemplate.Width,
+                        templateHeight = _bgGridTemplate.Height;
 
-                    g.SetClip(new System.Drawing.Rectangle(renderingRegion.X - viewport.X, renderingRegion.Y - viewport.Y, renderingRegion.Width, renderingRegion.Height));
-                    try
+                    int templateRepeats = (int)System.Math.Ceiling((float)(renderingRegion.Height + patternOffsetY) / templateHeight);
+                    for (int j = 0; j < templateRepeats; j++)
                     {
-                        int templateRepeats = (int)System.Math.Ceiling((float)(renderingRegion.Height + patternOffsetY) / _bgGridTemplate.Height);
-                        for (int j = 0; j < templateRepeats; j++)
+                        var tileRect = new System.Drawing.Rectangle(tileX, tileY + j * templateHeight, templateWidth, templateHeight);
+                        System.Drawing.Rectangle visibleRectangle = System.Drawing.Rectangle.Intersect(tileRect, screenRect);
+
+                        if (visibleRectangle.Width < 1 || visibleRectangle.Height < 1)
+                            continue;
+
+                        // The drawing engine has no rectangle clip, so only the visible part of the tile
+                        // is rendered (same result as the original SetClip/ResetClip based drawing).
+                        var sourceRectangle = new System.Drawing.Rectangle(visibleRectangle.X - tileRect.X, visibleRectangle.Y - tileRect.Y, visibleRectangle.Width, visibleRectangle.Height);
+
+                        using (var ct = new Aurigma.GraphicsMill.Transforms.Crop(sourceRectangle))
+                        using (var tile = ct.Apply(_bgGridTemplate))
                         {
-                            g.DrawImage(_bgGridTemplate, dstRect, /*srcRect,*/ Aurigma.GraphicsMill.Transforms.CombineMode.Copy, 1.0f, Aurigma.GraphicsMill.Transforms.ResizeInterpolationMode.NearestNeighbour);
-                            dstRect.Offset(0, _bgGridTemplate.Height);
+                            g.DrawImage(tile, visibleRectangle.X, visibleRectangle.Y);
                         }
-                    }
-                    finally
-                    {
-                        g.ResetClip();
                     }
                 }
                 else if (_workspaceBackgroundStyle == Aurigma.GraphicsMill.WinControls.WorkspaceBackgroundStyle.Solid)
                 {
-                    g.FillRectangle(new Aurigma.GraphicsMill.Drawing.SolidBrush(_workspaceBackColor1), screenRect);
+                    FillBackgroundRectangle(g, new Aurigma.GraphicsMill.Drawing.SolidBrush(_workspaceBackColor1), screenRect);
                 }
                 else
                 {
-                    g.FillRectangle(new Aurigma.GraphicsMill.Drawing.SolidBrush(_backColor), screenRect);
+                    FillBackgroundRectangle(g, new Aurigma.GraphicsMill.Drawing.SolidBrush(_backColor), screenRect);
                 }
+            }
+        }
+
+        private void FillBackgroundRectangle(Aurigma.GraphicsMill.Drawing.Graphics g, Aurigma.GraphicsMill.Drawing.SolidBrush brush, System.Drawing.Rectangle screenRect)
+        {
+            using (var fill = new Aurigma.GraphicsMill.Bitmap(screenRect.Width, screenRect.Height, Aurigma.GraphicsMill.PixelFormat.Format24bppRgb))
+            {
+                fill.Fill(brush.Color);
+                g.DrawImage(fill, screenRect.X, screenRect.Y);
             }
         }
 
